@@ -1,0 +1,363 @@
+\documentclass[10pt,twocolumn]{article}
+
+% Packages for geometry and math
+\usepackage{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{braket}
+\usepackage[utf8]{inputenc} % Allows the use of UTF-8 characters
+\usepackage[english]{babel} % Language settings
+\usepackage{lipsum} % Generates filler text
+\usepackage{natbib} % For bibliography
+% Customizing the page margins
+\usepackage[braket, qm]{qcircuit}
+\setlength{\arrayrulewidth}{0.5mm}
+\setlength{\tabcolsep}{16pt}
+\geometry{
+    top=2cm, % Top margin
+    bottom=2cm, % Bottom margin
+    left=1.5cm, % Left margin
+    right=1.5cm % Right margin
+}
+
+\title{Solving the smart scheduling of EV
+charging problem using qubit efficient quantum algorithms}
+\author{
+    % Ioannis D. Leonidas\thanks{Technical University of Crete, School of Electrical and Computer Engineering, Chania, Greece 73100. Email: \texttt{ileonidas@tuc.gr}} \\
+    % \and
+    % Alexander Dukakis\thanks{Email: \texttt{b.tan@u.nus.edu}} \\
+    % \and
+    % Benjamin Tan \\
+    % \and
+    % Dimitris G. Angelakis\thanks{Centre for Quantum Technologies, National University of Singapore. Email: \texttt{dimitris.angelakis@gmail.com}}
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+   {\bf With the rapid expansion of electric vehicles (EVs), the development of efficient EV smart charging schedules emerges as a critical task for the upcoming years. This work presents a novel approach using quantum computing to optimize EV charging schedules within urban networks. It explores the application of Quadratic Unconstrained Binary Optimization (QUBO) to address this complex optimization challenge effectively. By implementing innovative encoding techniques, the study minimizes the quantum bit (qubit) requirements, making it feasible for current quantum devices to process larger-scale problems. Through a series of simulations and experiments with quantum backends, this research compares the quantum-based method against traditional computational strategies.}
+\end{abstract}
+
+\section{Introduction}
+This study focuses on quantum approaches for optimizing the Smart Scheduling of EV Charging, which aims to harmonize charging hub supply with the demand and preferences within a city's charging network. The challenge is formulated as a Quadratic Unconstrained Binary Optimization (QUBO) problem, recognized for its adaptability in solving complex optimization tasks. Given the NP-hard nature of QUBO problems, especially in complex scenarios like charging scheduling, recent advancements in quantum computing offer novel approximation methods, even within the qubit constraints of NISQ devices. Our approach uses an innovative encoding technique to reduce qubit requirements, potentially empowering quantum devices to address larger-scale problems. Applying this method to the Electric Vehicle Charging challenge, the study evaluates its efficacy through simulations and quantum backend experiments, benchmarking against traditional computational strategies. This methodology represents progress in leveraging quantum computing for substantial industry optimizations, striving for efficiency with limited resources.
+.
+
+
+\section{Smart Scheduling of EV Charging Problem}
+The Smart Scheduling of EV Charging Problem is part of the broader category of scheduling issues, a well-studied and universally relevant set of challenges. These problems aim to optimize the allocation of resources over a specific period, focusing on achieving maximum efficiency. The Smart EV Charging problem specifically focuses on optimally allocating energy to EVs currently connected within a city's charging infrastructure. It involves satisfying each EV's distinct energy and charging requirements without surpassing the network's power capacity. Moreover, the ideal solution should minimize total energy expenditure while ensuring every vehicle's needs are met, demonstrating an efficient and sustainable approach to managing urban EV charging networks. Several classical algorithms exist for addressing the problem, including first-come-first-serve, least laxity first, earliest deadline first, and round robin. Among these, Model Predictive Control (MPC) is often regarded as the state of the art approach \cite{mpc}.A more detailed description of the problem is as follows:\\
+Consider a set of electric vehicles (EVs) and a set of charging ports. Each EV, denoted by \(i\), is characterized by its own energy demand \(e_i\), its required charging duration \(\tau_i^{\text{end}}\), and its arrival time at the charging station. The charging network provides a constant voltage at each charging port; however, the current supplied to each EV can only take discrete values from the set \{8, 16, 32, 48, 64\} amperes. Let \(r_i(t)\) represent the charging current received by EV \(i\) at time \(t\).
+
+The objective is to determine the appropriate charging current \(r_i(t)\) for each EV \(i\) at every time instance \(t\), ensuring that the aforementioned conditions are satisfied
+
+\subsection*{Adaptive Scheduling Algorithm}
+The preceding problem is approached with an algorithm based on (MPC), namely the Adaptive Scheduling Algorithm (ASA), which was initially deployed at the Caltech  campus \cite{asa}. The algorithm functions as follows:
+It considers the set of active EVs (those currently being charged), along with their remaining energy requirements and the remaining duration of their charging sessions. Given this information, the algorithm constructs a charging schedule over a time horizon $T$. This schedule specifies the current that each active EV should receive at every time step, beginning from the present moment and concluding at the end of the horizon. What distinguishes this scheduling algorithm from others, such as first-come-first-serve, earliest deadline first, etc., is its ability to consider future time steps and make decisions for current charging currents based on predictions of future conditions. To achieve this, we discretize time into timesteps \(t_k\) and introduce an optimization problem in which we define the optimization variables \(\mathbf{r}\) as follows:
+\[
+\mathbf{r} = \begin{bmatrix} 
+r_1(t_1) & \hdots & r_1(t_n) \\
+\vdots & \ddots & \vdots \\
+r_N(t_1) & \hdots & r_N(t_n)
+\end{bmatrix}
+\]
+
+Here, \(N\) represents the number of active EVs, and \(t_n\) is the last timestep in the horizon. The matrix is what will eventually be the charging schedule. The optimization problem will look like this:
+\begin{equation*}
+        \begin{aligned}
+        & \underset{\mathbf{r}}{\text{minimize}}
+        & & U(\mathbf{r}) \\
+        & \text{subject to}
+        & & r_i(t_k) \in \{0,8,16,32,48,64\} \;\;\; \forall i,k
+        \end{aligned}
+    \end{equation*}\\
+The cost function $U(\bf r)$ varies depending on the use cases, which will be discussed later in this report. This optimization process is what will be formulated as QUBO problem. The optimization process will be repeated, and the charging schedule recalculated at every timestep, as EVs arrive and depart and the number of active EVs fluctuates. In every iteration, the remaining energy demand and the remaining charging duration are adjusted as follows:
+\[
+e_i(t_k) = e_i(t_{k-1}) - Vr_i(t_k)\Delta t
+\]
+\[
+d_i(t_k) = d_i(t_{k-1}) - 1
+\]
+where \(\Delta t\) is the difference between timesteps.
+
+\section{Quadratic Unconstrained Binary Optimization}
+
+The QUBO framework addresses binary optimization problems where the goal is to find a binary vector that minimizes a given quadratic cost function. The formulation of the problem is:
+\[
+\textbf{x}^* = \arg\min_{\textbf{x}} \textbf{x}^\top Q\textbf{x}
+\]
+where $\textbf{x} \in \{0, 1\}^{n_c}$, $A$ is a real, symmetric matrix derived from the optimization problem, and $n_c$ represents the number of classical binary variables.
+
+To solve QUBO problems to using traditional quantum approaches, the cost function should be mapped to an Ising Hamiltonian:
+$$\hat{H}_{Ising} = \frac{1}{4}\sum_{k,l}^{n_c} Q_{kl}(1-\hat{\sigma}^{(k)}_z)(1 - \hat{\sigma}^{(l)}_z) $$
+
+where $\hat{\sigma}^{(k)}_z$ is the Pauli Z matrix acting on qubit $k$, and
+$ Q_{kl}$ are the elements of matrix $ Q$. The ground state of
+$H_{Ising}$ is a basis state $\ket{x_i}$ that corresponds to an exact
+solution $x_i$ of the QUBO problem defined by $ Q$
+
+Traditionally, Variational Quantum Algorithms (VQAs) aim to find the ground state by mapping each classical variable to a single qubit and approximating the solution using a set of parameters$\boldsymbol{\theta}$. Essentially, every possible binary configuration of the classical variables $\bf x_i$, is represented by a basis state $\ket{x_i}$ and the algorithm prepares a quantum state that is a superposition of all these possible configurations. In every iteration of the VQA the parameters $\boldsymbol{\theta}$ are adjusted to increase the amplitudes of the basis state corresponding to the solution of the problem. The set of parameters control the quantum  state using a unitary operator $\hat{U}(\boldsymbol{\theta})$:
+$$\ket{\psi(\boldsymbol{\theta)}} = \hat{U}(\boldsymbol{\theta})\ket{\psi_0} = \sum_{i = 1}^{2^{n_c}} \alpha_i (\boldsymbol{\theta}) \ket{x_i}$$
+
+The objective of the the VQA is to minimize the energy of the Ising Hamiltonian
+$\bra{\psi(\boldsymbol{\theta})}H_{Ising}\ket{\psi(\boldsymbol{\theta})}$, which can be classically expressed as:
+\begin{equation}
+        \begin{aligned}
+        & \underset{\mathbf{r}}{\text{min}}
+        & & C(\mathbf{x})  = \sum_{i = 1}^{2^{n_c}} {\bf x_i}^\top Q {\bf x_i} P({\bf x_i}) 
+        \end{aligned}
+        \label{eq:eq 1}
+    \end{equation}\\
+Where $P({\bf x_i}) $ is the probability of $\bf x_i$ and is equal to $|\alpha_i(\boldsymbol{\theta}|^2$
+
+\section{Variational Hybrid Quantum-Classical Algorithms}
+These algorithms, including the Quantum Approximate Optimization Algorithm (QAOA) and hardware-efficient ansatzes, represent a significant approach to solving QUBO problems. They employ a parameterized quantum circuit, the parameters of which are adjusted using classical optimizer to minimize a cost function. 
+
+The QAOA operates by applying a sequence of unitary transformations parameterized by angles $\bf \gamma$ and $\bf \beta$, designed to evolve an initial state into one that minimizes the objective function. The process is mathematically represented as:
+\[
+|\psi(\boldsymbol{\gamma}, \boldsymbol{\beta})\rangle = \prod_{p=1}^{P} U_{B}(\beta_p)U_{C}(\gamma_p)|+\rangle^{\otimes n_c}
+\]
+where $U_{C}(\gamma_p)$ and $U_{B}(\beta_p)$ are unitary operators associated with the problem and mixing Hamiltonians, respectively.
+
+The optimal quantum state is identified by tuning the variational parameters \({\boldsymbol{\gamma}} = [\gamma_1, \ldots, \gamma_P]\) and \({\boldsymbol{\beta}} = [\beta_1, \ldots, \beta_P]\) via classical optimization strategies. QAOA, a Trotterized version of the annealing process through multiple unitary transformations, can theoretically achieve the optimal solution as \(P\) tends towards infinity. Nonetheless, the application of QAOA on gate-based quantum computing systems generally demands deep quantum circuits.
+
+
+
+
+In hardware-efficient variational approaches, the strategy $U(\boldsymbol{\theta})$ involves using a combination of the simplest possible quantum operations that are specifically chosen to work well on the quantum computer being used, including single-qubit rotations and two-qubit entangling operations as depicted in Fig.\ref{fig:circuit}. Despite their straightforward implementation on quantum devices, these approaches generally lack a guarantee for convergence towards the optimal solution and are susceptible to barren plateaus in the cost function landscape, thereby hindering the achievement of the optimal solution.
+
+\begin{figure}[h]
+            \[
+            \begin{array}{c}
+            
+                \Qcircuit @C=1.4em @R=2em {
+                    \lstick{\ket{0}} &\gate{R_Y(\theta_1)} & \qw  &\ctrl{1} & \qw & \qw &\meter & \cw \\
+                    \lstick{\ket{0}} &\gate{R_Y(\theta_2)} & \qw  &\targ & \ctrl{1} & \qw &\meter & \cw \\
+                    \lstick{\ket{0}} &\gate{R_Y(\theta_3)} & \qw  &\ctrl{1} \qwx[1] & \targ & \qw &\meter & \cw \\
+                      & &  &  & & & &   \\
+                    \lstick{\vdots}  &\vdots &  & \vdots & & &\rstick{\vdots}   \\
+                    & &  &  & & & &   \\
+                   \lstick{\ket{0}} &\gate{R_Y(\theta_{n_q})} & \qw  &\targ \qwx[-1] & \qw & \qw &\meter & \cw \gategroup{1}{2}{7}{6}{1.5em}{--}
+                    }
+            
+            \end{array}
+            \]
+    \caption{The \(R_Y\)-\(C_X\) hardware-efficient ansatz is designed for \(n_q\) qubits. The configuration enclosed by the dashed box constitutes one layer of the ansatz. This layer can be iteratively applied numerous times, contingent upon the preferred number of layers.
+}
+\label{fig:circuit}
+    \end{figure} 
+\section{Qubit Efficient Encoding for Binary Optimization Problems}
+Traditional VQAs map each classical variable to an individual qubit. This implies that the size of the binary optimization problem we aim to solve is constrained by the number of qubits available on current quantum devices. In \cite{compression},  a qubit-efficient encoding scheme is introduced that reduces the number of required qubits to scale logarithmically with respect to the number of classical variables. 
+
+The encoding technique divides the classical binary variables (\(n_c\)) into subgroups, each represented by \(n_a\) qubits. This subdivision allows for a compact quantum representation, where \(n_r = \log_2(\frac{n_c}{n_a})\) qubits act as indices, pointing to the specific subgroup being represented. The method presents two extreme cases of encoding:
+
+\begin{itemize}
+    \item \textbf{Minimal Encoding:} Each subgroup consists of a single variable (\(n_a = 1\)), maximizing the reduction in qubit usage.
+    \item \textbf{Full Encoding:} A direct one-to-one mapping of classical variables to qubits, where the entire set of variables forms a single subgroup (\(n_a = n_c\)), requiring no index qubits. Full Encoding is essentially the traditional VQA scheme
+\end{itemize}
+
+\subsection{Minimal Encoding: Mathematical Formulation}
+
+The quantum state under minimal encoding is described as:
+\begin{equation}
+    |\psi_{me}(\boldsymbol{\theta})\rangle = \sum_{k=1}^{n_c} \left( \beta_k(\boldsymbol{\theta})[a_k(\boldsymbol{\theta})|0\rangle_a + b_k(\boldsymbol{\theta})|1\rangle_a] \right) \otimes |\phi_k\rangle_r
+\end{equation}
+This state leverages both ancilla (\(|0\rangle_a, |1\rangle_a\)) and register qubits (\(|\phi_k\rangle_r\)) for efficient representation. The cost function remains the same as the conventional form (\ref{eq:eq 1}) but introduces a novel probability calculation for obtaining specific bitstrings from the quantum state.
+
+In full encoding, the probability \(P(\mathbf{x})\) of obtaining a bitstring \(\mathbf{x}\) can be statistically derived from multiple measurements of the circuit. In contrast, minimal encoding does not capture the correlation between different binary variables, as they are divided into separate ancilla groups. Consequently, the probability \(P(\mathbf{x})\) must be approximated by treating the individual binary variables as independent, leading to:
+\begin{equation}
+    P(\mathbf{x}) = \prod_{i = 1}^{n_c} P(x_i)
+    \label{eq: eq3}
+\end{equation}
+
+For the case of minimal encoding, by eq. (2) one can see that $P(x_i = 0) = |a_i(\boldsymbol{\theta})|^2$ and $P(x_i = 1) = |b_i(\boldsymbol{\theta})|^2$
+
+Furthermore, The required number of qubits for a problem with \(n_c\) classical variables to \(n_q = 1 + \log_2(n_c)\).
+To compute the cost function using this approach, one employs the variational cost function (\ref{eq:eq 1}), and substitute the probability distribution in eq.(\ref{eq: eq3}). The probability \(P({\bf x})\) is calculated as the proportion of each unique sample \(x_i\) across all samples, introducing minimal classical computational overhead due to the necessity of forming a probability distribution for sampling. When expressed in the form of projectors, this becomes.
+\begin{align}
+C_{me}(\boldsymbol{\theta}) &= \sum_{k\neq l}^{n_c} Q_{kl}\frac{\braket{\hat{P}^1_k}_{\boldsymbol{\theta}}\braket{\hat{P}^1_l}_{\boldsymbol{\theta}}}{\braket{\hat{P}_k}_{\boldsymbol{\theta}}\braket{\hat{P}k}_{\boldsymbol{\theta}}}+ \sum_{k}^{n_c} Q_{kk}\frac{\braket{\hat{P}^1_k}_{\boldsymbol{\theta}}}{\braket{\hat{P}k}_{\boldsymbol{\theta}}} = \\
+ &=\sum_{k\neq l}^{n_c} Q_{kl}|b_k(\boldsymbol{\theta})|^2|b_l(\boldsymbol{\theta})|^2+ \sum_{k}^{n_c} Q_{kk}|b_k(\boldsymbol{\theta})|^2
+\end{align}
+
+The minimal encoding cost function, employs projectors \( \hat{P}_k = |\phi_k\rangle\langle\phi_k|_r \) targeting the register basis states \( |\phi_k\rangle_r \), and \( \hat{P}^1_k = |1\rangle\langle1|_a \otimes \hat{P}_k \), focusing on conditions where the ancilla is in the \( |1\rangle_a \) configuration. This methodology eliminates the need for reconstructing classical bitstrings \( {\bf x}_i \) to assess multiple outcomes of \( {\bf x}_i^\top Q {\bf x}_i \) at every step of optimization.
+
+
+\subsection{Generic Encoding}
+The minimal encoding strategy can be extended to configurations where each ancilla group contains more than a single qubit. Regardless of the grouping configuration, the cost function presented in Equation (4) remains consistent and can be reformulated without projectors as:
+
+\begin{equation}
+C_{me}(\boldsymbol{\theta}) = \sum_{k\neq l}^{n_c} Q_{kl}P_{k,l}^{1,1}(\boldsymbol{\theta})+ \sum_{k}^{n_c} Q_{kk}P_{k}^{1}(\boldsymbol{\theta})
+\end{equation}
+
+Where $P_{k,l}^{1,1}$ denotes the probability that binary variables $x_k$ and $x_l$ are both measured as 1, and $P_{k}^{1}$ represents the probability of $x_k$ to be measured  as 1. The differences among encoding schemes primarily arise from the computation of the joint probability \(P_{k,l}^{1,1}\). When \(x_k\) and \(x_l\) are within the same ancilla group, their joint probability can be accurately determined by the circuit's measurements. However, when \(x_k\) and \(x_l\) are in separate groups, we must assume they are independent, requiring us to approximate their joint probability. The larger the length of the ancilla group, the more correlations can be captured. Nonetheless, the approximation of joint probabilities is not the only limitation of this encoding technique. The reduction in qubits comes at the cost of an increased need for circuit measurements to ensure that all registers are adequately measured. Insufficient measurements lead to unaccounted registers, for which we must assign a default probability value of 0.5. Thus, these qubit encoding schemes present a trade-off between qubit reduction and the accuracy of evaluation.
+
+\section{Formulating Smart EV Charging Problem into QUBO}
+\subsection{Cost function}
+In this section we attempt to convert the original scheduling problem into QUBO so that we can employ one of the previous methods to solve it. Initially we need to have to define a cost function that describes the problem. Essentially, the cost function should be a combination of multiple cost functions, each serving a different aspect of the problem.\\
+
+The first cost function penalizes any unmet energy and time demands. It will be referred to as "NC," which stands for "non-completion," and is defined as follows:
+
+\begin{equation}
+U^{NC}({\bf r}) = \sum_{i=1}^N\left(\sum_{t_k=t_0}^{\tau_i^{end}} \left(V\cdot r_i(t_k)\cdot \Delta t\right) - e_i \right)^2
+\end{equation}
+
+The cost function in (7) ensures that EV \(i\) will receive the full amount of energy it requested \(e_i\) before the deadline \(\tau_i^{end}\). To reformulate this in a more convenient form, we eliminate \(\tau_i^{end}\) by introducing indicators \(\delta_{ik}\), where \(\delta_{ik} = 1\) if the timestep \(t_k\) is prior to the deadline \(\tau_i^{end}\) ($t_k < \tau_i^{end}$), and \(\delta_{ik} = 0\) otherwise. Given this, we rewrite \(U^{NC}\) as:
+\begin{equation}
+U^{NC}(\mathbf{r}) = \sum_{i=1}^N\left(\sum_{t_k=t_0}^{T} \left(V\cdot \delta_{ik}\cdot r_i(t_k)\cdot \Delta t\right) - e_i \right)^2
+\end{equation}
+Where \(T\) is the optimization horizon.
+
+The second cost function accounts for the minimization of energy at each timestep. It will be referred to as "LV," which stands for "Load-variation":
+\begin{equation}
+U^{LV}(\mathbf{r}) = \sum_{t_k=t_0}^T\left(\sum_{i=1}^{N} r_i(t_k)\right)^2
+\end{equation}
+
+The third cost function aims to prioritize high-load charging in the initial timesteps, thereby clearing the field for potentially arriving EVs. It will be referred to as "QC," which stands for "Quick-charging":
+
+\begin{equation}
+U^{QC}(\mathbf{r}) = \sum_{t_k=t_0}^T\frac{T-t_k}{T - t_0}\sum_{i=1}^{N} r_i(t_k)
+\end{equation}
+
+Finally, we include a penalty term to prevent the network from charging beyond its power capacity:
+\begin{equation}
+    \sum_{i=1}^{N} V \cdot r_i(t_k) \leq C \quad \forall t_k
+\end{equation}
+Where \(C\) is the power capacity of the network. As mentioned, the problem's cost function is a weighted sum of the previous cost functions, including the penalty term:
+
+\begin{equation*}
+    \begin{aligned}
+    & \underset{\mathbf{r}}{\text{minimize}}
+    & & U(\mathbf{r}) := w^{NC}U^{NC}(\mathbf{r}) +  w^{LV}U^{LV}(\mathbf{r}) + w^{QC}U^{QC}(\mathbf{r})\\
+    & \text{subject to}
+    & & \sum_{i=1}^{N} V \cdot r_i(t_k) \leq C \quad \forall t_k,\\
+    & & & r_i(t_k) \in \{0, 8, 16, 32, 48, 64\} \quad \forall i, k.
+    \end{aligned}
+\end{equation*}
+or equivalently
+
+\begin{equation*}
+    \begin{aligned}
+    & \underset{\mathbf{r}}{\text{minimize}}
+    & & U(\mathbf{r}) := w^{NC} \sum_{i=1}^N\left(\sum_{t_k=t_0}^{T} \left(V\cdot \delta_{ik}\cdot r_i(t_k)\cdot \Delta t\right) - e_i \right)^2 +\\ 
+    & & &  w^{LV}\sum_{t_k=t_0}^T\left(\sum_{i=1}^{N} r_i(t_k)\right)^2 + \\
+    & & & w^{QC}\sum_{t_k=t_0}^T\frac{T-t_k}{T - t_0}\sum_{i=1}^{N} r_i(t_k) \\
+    & \text{subject to}
+    & & \sum_{i=1}^{N} V \cdot r_i(t_k) \leq C \quad \forall t_k,\\
+    & & & r_i(t_k) \in \{0, 8, 16, 32, 48, 64\} \quad \forall i, k.
+    \end{aligned}
+\end{equation*}
+\subsection{Binary Conversion}
+The cost function is clearly quadratic, which aligns well with the requirements for converting the problem into QUBO format. However, we also need to ensure it is binary, which means we must devise a binary representation of \(r_i(t_k)\) without violating the quadratic nature of the cost function.
+
+A potential binary encoding for the set \(\{0,8,16,32,48,64\}\) employs a three-qubit representation:
+\begin{equation}
+    r_i(t_k) = x_{i,k,2} \cdot 16 \cdot\sum_{q=0}^1 2^q x_{i,k,q} + (1 - x_{i,k,2}) \cdot 8\cdot x_{i,k,1}
+\end{equation}
+where the first term encodes the values \{16,32,48,64\} and the second term accounts for the values \{0,8\}, with the qubit \(x_{i,k,2}\) acting as a control. However, this encoding introduces terms like \(x_{i,k,2}x_{i,k,1}\) which increase the order of the cost function. Given the challenge of finding a linear binary encoding for \(r_i(t_k)\) within this set of values, we opt to simplify the set to \{0,16,32,48\}, which can be straightforwardly encoded using two qubits as:
+\begin{equation}
+    r_i(t_k) = 16 \sum_{q=0}^1 2^q x_{i,k,q}
+\end{equation}
+
+\subsection{Incorporating Inequality constraints}
+This encoding preserves the second-order nature of the cost function. The final step to fully convert the problem into QUBO is incorporating the inequality constraint into the cost function. Normally, equality constraints are integrated into the cost function as squared error penalty terms. To include an inequality constraint, we first transform it into an equality constraint using a slack variable \(s\), as suggested by \cite{inbook} and \cite{slack}. Therefore, our inequality constraints are adjusted as follows:
+
+\begin{equation}
+    \left(\sum_{i=1}^{N} V \cdot r_i(t_k)\right) + s_k = C \quad \forall k
+\end{equation}
+
+
+
+The slack variables \(s_k\) are positive integers that represent the residual power capacity, thus the number of qubits required to encode a single slack variable is at most \(\lceil\log_2(C)\rceil\), and consequently, for all slack variables, we need \(n\lceil\log_2(C)\rceil\) (\(n\) being the number of timesteps in the horizon). For instance, with a capacity of 100kW and a 6 timestep horizon, an additional $6\cdot7 = 42$ qubits would be needed. This represents a significant increase in qubit requirements. To avoid this increase, we employ an alternative method that bypasses the inequality constraints entirely, focusing on controlling the network load by adjusting accordingly the weight \(w^{LV}\) of the "Load Variation" cost function. The tighter the power capacity constraint, the greater the weight \(w^{LV}\) should be. Throughout the experiments, this method will be used, but for comparisons with classical algorithms, the slack variable implementation will be utilized to ensure fairness in comparison.
+
+
+
+\begin{figure*}[h]
+\centering
+\includegraphics[width=0.48\linewidth]{Figure_1.png}
+\includegraphics[width=0.48\linewidth]{distribution of solutions.png}
+\caption{Comparison of the Full Encoding VQE against the Compressed VQE for the Toy Example with a 2-Layer Ansatz Across 10 Experiments and 10000 circuit shots. On the left, we observe the evolution of the cost function with respect to the optimizer iterations, and on the right, we see the distribution of solutions after convergence for each experiment.
+}
+\label{fig:toy example}
+\end{figure*}
+
+\section{Experimental Procedure}
+The first experiment to verify our formulation's effectiveness will be the application of the full encoding VQE, complemented by an efficient encoding scheme. We select a 2-body correlation encoding, where the ancilla consits of 2 qubits. This particular encoding scheme is chosen to capture at least the correlation between the two qubits (\(x_{i,k,0}\) and \(x_{i,k,1}\)) that encode a single variable \(r_i(t_k)\). This approach will be referred to as "Compressed VQE".The two algorithms will be applied to a toy example with a Horizon of \(T=4\) hours, a timestep of \(\Delta t = 1\) hour, a constant Voltage of \(V=240V\), and 4 EVs, where 3 require receiving \(26.88\) kWh within 3 hours, and 1 requires \(7.68\) kWh within just 1 hour. For this experiment, we will disregard the power capacity of the network. The experiment will be conducted using the Qiskit library with a noise-free qasm-simulator. This toy example involves \(4 \times 4 = 16\) classical variables \(r_i(t_k)\), which can be encoded using 32 qubits for the full encoding algorithm. This count aligns with the maximum number of 32 qubits supported by the qasm simulator. Therefore, larger scale examples will be conducted using the Compressed VQE only. Figure \ref{fig:toy example} shows the comparison of Compressed VQE with traditional VQE for a 2-layer ansatz. The schedule produced by each algorithm was:
+\\\\
+for Compressed VQE:
+\begin{equation*}
+    {\bf r} = \begin{bmatrix} 32 & 32 &48&0\\
+     32 & 48 &32 &0\\
+      32 & 48 &32&0\\
+       32 & 0 &0&0
+    \end{bmatrix}
+\end{equation*}
+for full encoding VQE:
+\begin{equation*}
+    {\bf r} = \begin{bmatrix} 16 & 48 &48&0\\
+     32 & 32 &48 &0\\
+      48 & 32 &32&0\\
+       32 & 0 &0&0
+    \end{bmatrix}
+\end{equation*}
+
+The Compressed VQE circuit employs 2 qubits for the ancilla and \(\log_2(16/2) = 4\) for the register, summing up to 6 qubits in total. For the 2-Layer Ansatz, the number of necessary rotational \(R_Y\) gates for 1 qubit is 12, and the circuit demands 5 two-qubit \(CNOT\) gates. In contrast, the traditional VQE approach, involving 32 qubits, requires 64 \(R_Y\) gates and 31 \(CNOT\) gates.
+
+\subsection{Large Scale Example}
+\begin{figure*}[h]
+\centering
+\includegraphics[width=0.32\linewidth]{large_opt.png}
+\includegraphics[width=0.32\linewidth]{layer 32.png}
+\includegraphics[width=0.32\linewidth]{32 distr.png}\\
+\includegraphics[width=0.32\linewidth]{48 opt.png}
+\includegraphics[width=0.32\linewidth]{laye 48.png}
+\includegraphics[width=0.32\linewidth]{48 distr.png}
+\caption{Left and middle plots present the evolution of the cost function with respect to the optimizers iteration for shots = 1000, 10000, 500000 (Left) and Layers = 2, 4, 6 (Middle). Right plot shows the distribution of the solutions having acquired the optimal parameters. The \textbf{Upper plots} refer to a large-scale example with 32 EVs and a 16-timestep horizon, while the \textbf{Lower plots} pertain to a large-scale example with 48 EVs and a 12-timestep horizon.}
+\label{fig:32 large}
+\end{figure*}
+
+Having confirmed that the model is effective for a toy example, we must now examine its performance on larger scale problems. As previously mentioned, the use of traditional VQE is not feasible beyond this point; therefore, we will proceed exclusively with the Compressed VQE.We will conduct experiments with a Horizon of 16 timesteps, each separated by half an hour, resulting in an 8-hour horizon, and involving 32 EVs. We will evaluate the results for varying numbers of circuit shots and varying numbers of ansatz layers. For the 2-Layer Ansatz, this example would require 1024 classical variables, which means \(2 + \log_2(1024/2) = 11\) qubits, resulting in 22 \(R_Y\) gates and 10 \(CNOT\) gates. Additionally, we will set up a second large-scale example with 48 EVs and a 12-timestep horizon. This scenario would require 1152 classical variables, necessitating \(2 + \lceil \log_2(1152/2) \rceil = 12\) qubits, which translates to 24 \(R_Y\) gates and 11 \(CNOT\) gates. In Figure \ref{fig:32 large}, we observe the outcomes for both examples. In each scenario, an increase in the number of circuit shots enhances the results, as expected. In contrast, increasing the number of ansatz layers diminishes the accuracy of the algorithm, a behaviour associated with the barren plateau phenomenon.
+
+\subsection{Noise Simulation}
+\begin{figure}[h!]
+\centering
+\includegraphics[width=\linewidth]{noise sim.png}
+\caption{Comparison of the Compressed VQE for the Toy Example, introducing noise, across 5 Experiments with varying-layer Ansatz. We investigate how increases in circuit depth affect the outcomes across different gate fidelities. The noise model incorporates depolarization error, thermal relaxation error, and readout error. The readout error is fixed at 1\% for all experiments, as well as the relaxation time (\(T_1 = 50\) ms) and dephasing time (\(T_2 = 70\) ms) both of which also remain constant throughout the experiments.}
+\label{fig:noise}
+\end{figure}
+In this section, we investigate the performance of our encoding scheme under
+the effects of a noise model consisting of thermal relaxation errors, imperfect gate fidelities, and readout errors. Thermal relaxation and decoherence can be characterized by the relaxation constants $T_1$ and $T_2$ respectively
+Gate errors are implemented via a depolarization channel that affects each qubit
+as it undergoes a gate operation. 
+Readout error is the probability of obtaining an incorrect value of the qubit during measurement, i.e. reading a $\ket{0}$ when the qubit is in the $\ket{1}$ state and vice versa. In Figure \ref{fig:noise}, we observe the outcomes of applying various noise models with differing gate fidelities to the toy example.
+It is evident how an increase in circuit depth makes the algorithm increasingly susceptible to noise. In scenarios where noise is present, this vulnerability is pronounced. In the ideal case devoid of noise, increasing the circuit depth does not affect the outcome.
+
+
+
+
+
+\section{Comparison with Classical Algorithms}
+
+\section{Conclusion}
+
+
+\bibliographystyle{unsrt}
+\bibliography{ref}
+% \begin{thebibliography}{99}
+
+% \bibitem{mpc}
+% @ARTICLE{9509290,
+%   author={Lee, Zachary J. and Sharma, Sunash and Johansson, Daniel and Low, Steven H.},
+%   journal={IEEE Transactions on Smart Grid}, 
+%   title={ACN-Sim: An Open-Source Simulator for Data-Driven Electric Vehicle Charging Research}, 
+%   year={2021},
+%   volume={12},
+%   number={6},
+%   pages={5113-5123},
+%  }
+
+
+
+% \end{thebibliography}
+\end{document}
